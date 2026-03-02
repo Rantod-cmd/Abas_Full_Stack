@@ -9,6 +9,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Set AI URL to Docker service name so rewrites are baked correctly at build time
 ENV PYTHON_AI_URL=http://ai:8000/ai
+# DATABASE_URL is required by prisma.config.ts at config-load time (not actual connection)
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 RUN npx prisma generate
 RUN npm run build
 
