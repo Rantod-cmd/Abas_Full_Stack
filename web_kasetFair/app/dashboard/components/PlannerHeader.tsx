@@ -17,6 +17,7 @@ type PlannerHeaderProps = {
   assumptionFileLoading?: boolean;
   onDownloadAssumption?: () => void;
   canDownloadAssumption?: boolean;
+  onOpenMobileMenu?: () => void;
 };
 
 export function PlannerHeader({
@@ -29,62 +30,89 @@ export function PlannerHeader({
   assumptionFileLoading,
   onDownloadAssumption,
   canDownloadAssumption,
+  onOpenMobileMenu,
 }: PlannerHeaderProps) {
   const router = useRouter();
   const { t, locale, setLocale } = useLocale();
   return (
-    <header className="p-6 space-y-6 bg-[#f8f9ff] relative">
-      <div className="absolute top-6 right-6 z-10 flex items-center gap-1 rounded-full border border-[#d9ddff] bg-white p-1 shadow-sm">
-        {(["en", "th"] as const).map((lng) => (
+    <header className="p-4 sm:p-6 space-y-6 bg-[#f8f9ff] relative mb-6">
+      {/* Top Bar: Hamburger (Mobile) + Language Switcher */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
           <button
-            key={lng}
             type="button"
-            onClick={() => setLocale(lng)}
-            className={`rounded-full px-3 py-1 text-xs font-semibold ${locale === lng
+            className="lg:hidden p-2 -ml-2 text-slate-500 hover:text-[#4c4bd6] hover:bg-white rounded-xl transition"
+            onClick={onOpenMobileMenu}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+
+          <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.2em] sm:tracking-[0.4em] text-[#b0b3d6]">
+            Dashboard
+          </p>
+        </div>
+
+        <div className="flex items-center gap-1 rounded-full border border-[#d9ddff] bg-white p-1 shadow-sm">
+          {(["en", "th"] as const).map((lng) => (
+            <button
+              key={lng}
+              type="button"
+              onClick={() => setLocale(lng)}
+              className={`rounded-full px-3 py-1 text-[10px] sm:text-xs font-semibold transition ${locale === lng
                 ? "bg-[#4c4bd6] text-white"
                 : "text-[#4c4bd6] hover:bg-[#eef0ff]"
-              }`}
-          >
-            {lng.toUpperCase()}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.4em] text-[#b0b3d6]">
-            Dashboard Overview
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold text-[#2e2e6c]">
-            Good to see you again, {userName ?? "Planner"}.
-          </h1>
+                }`}
+            >
+              {lng.toUpperCase()}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <ShopDropdown
-          shops={shops}
-          selectedShopId={selectedShopId}
-          onSelectShop={onSelectShop}
-        />
-        <div className="flex flex-wrap gap-2 ml-auto">
-          {/* Language Switcher MOVED to top-right absolute position */}
+      {/* Title / Greeting */}
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-semibold text-[#2e2e6c] leading-tight">
+          Good to see you again, <br className="sm:hidden" />
+          <span className="text-[#4c4bd6]">{userName ?? "Planner"}.</span>
+        </h1>
+      </div>
 
-          <Button onClick={onAddShop} className="rounded-full px-5 text-white">
-            {t("btn.addShop")}
-          </Button>
+      {/* Controls Area */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
+        {/* Shop Dropdown (Full width on mobile) */}
+        <div className="w-full sm:w-auto">
+          <ShopDropdown
+            shops={shops}
+            selectedShopId={selectedShopId}
+            onSelectShop={onSelectShop}
+          />
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          {shops.length === 0 && (
+            <Button onClick={onAddShop} className="flex-1 sm:flex-none rounded-full px-5 text-white">
+              {t("btn.addShop")}
+            </Button>
+          )}
 
           <Button
             type="button"
-            className="rounded-full bg-emerald-500 px-5 text-white hover:bg-emerald-600 disabled:opacity-60"
+            className="flex-1 sm:flex-none rounded-full bg-emerald-500 px-4 sm:px-5 text-white hover:bg-emerald-600 disabled:opacity-60 text-xs sm:text-sm"
             disabled={!canDownloadAssumption || assumptionFileLoading}
             onClick={onDownloadAssumption}
           >
-            {assumptionFileLoading ? "กำลังโหลด..." : "Download Excel"}
+            {assumptionFileLoading ? "Loading..." : "Excel"}
           </Button>
+
           <Button
             onClick={() => router.push(`/dashboard/assumptions${selectedShopId ? `?store_id=${selectedShopId}` : ""}`)}
-            className="rounded-full bg-[#eef0ff] px-5 text-sm font-semibold text-[#4c4bd6] hover:bg-[#e2e5ff]"
+            className="flex-1 sm:flex-none rounded-full bg-[#eef0ff] px-4 sm:px-5 text-xs sm:text-sm font-semibold text-[#4c4bd6] hover:bg-[#e2e5ff]"
             variant="ghost"
           >
             {t("btn.assumption")}

@@ -40,7 +40,9 @@ export function PlannerSidebar({
   userEmail,
   userImage,
   selectedStoreId,
-}: PlannerSidebarProps) {
+  mobile,
+  onClose,
+}: PlannerSidebarProps & { mobile?: boolean; onClose?: () => void }) {
   const { t } = useLocale();
   const displayName = userName || "ABAS";
   const displayEmail = userEmail || "abasxaxis@gmail.com";
@@ -69,8 +71,8 @@ export function PlannerSidebar({
     .slice(0, 2)
     .toUpperCase();
 
-  return (
-    <aside className="sticky top-0 flex h-screen w-80 flex-col justify-between border-r border-[#ecefff] bg-[#fcfbff] px-8 py-7">
+  const SidebarContent = (
+    <div className="flex h-full flex-col justify-between">
       <div className="space-y-8">
         <div className="flex items-center gap-3 rounded-2xl border border-[#e6e7fb] bg-white p-4 shadow-sm">
           {userImage ? (
@@ -86,8 +88,8 @@ export function PlannerSidebar({
               {initials}
             </div>
           )}
-          <div>
-            <p className="text-base font-semibold text-[#2f3266]">{displayName}</p>
+          <div className="overflow-hidden">
+            <p className="truncate text-base font-semibold text-[#2f3266]">{displayName}</p>
           </div>
         </div>
 
@@ -105,6 +107,7 @@ export function PlannerSidebar({
                     label={t(item.labelKey)}
                     active={isActive}
                     href={item.href}
+                    onClick={mobile ? onClose : undefined}
                   />
                 );
               })}
@@ -122,6 +125,28 @@ export function PlannerSidebar({
           {t("sidebar.logout")}
         </Button>
       </div>
+    </div>
+  );
+
+  if (mobile) {
+    return (
+      <div className="fixed inset-0 z-50 flex lg:hidden">
+        {/* Backdrop */}
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm" onClick={onClose} />
+        {/* Sidebar Panel */}
+        <aside className="relative flex h-full w-80 flex-col border-r border-[#ecefff] bg-[#fcfbff] px-8 py-7 shadow-2xl animate-in slide-in-from-left duration-300">
+          <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+          {SidebarContent}
+        </aside>
+      </div>
+    );
+  }
+
+  return (
+    <aside className="sticky top-0 hidden lg:flex h-screen w-80 flex-col justify-between border-r border-[#ecefff] bg-[#fcfbff] px-8 py-7">
+      {SidebarContent}
     </aside>
   );
 }
@@ -130,14 +155,16 @@ function SidebarItem({
   label,
   active,
   href,
+  onClick,
 }: {
   label: string;
   active?: boolean;
   href?: string;
+  onClick?: () => void;
 }) {
   const className = `flex w-full items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold transition ${active
-      ? "bg-[#4c4bd6] text-white shadow-lg ring-2 ring-[#dfe0ff]"
-      : "text-[#4b4f68] hover:bg-[#f2f4ff] hover:text-[#4c4bd6]"
+    ? "bg-[#4c4bd6] text-white shadow-lg ring-2 ring-[#dfe0ff]"
+    : "text-[#4b4f68] hover:bg-[#f2f4ff] hover:text-[#4c4bd6]"
     }`;
 
   const content = (
@@ -151,11 +178,11 @@ function SidebarItem({
 
   if (href) {
     return (
-      <Link href={href} className={className}>
+      <Link href={href} className={className} onClick={onClick}>
         {content}
       </Link>
     );
   }
 
-  return <div className={className}>{content}</div>;
+  return <div className={className} onClick={onClick}>{content}</div>;
 }

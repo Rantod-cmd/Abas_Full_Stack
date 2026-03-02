@@ -72,7 +72,12 @@ function AssumptionsContent() {
 
   useEffect(() => {
     const storeIdParam = searchParams.get("store_id");
-    const storeId = currentShop?.store_id ?? currentShop?.id ?? storeIdParam;
+    let storeId = currentShop?.store_id ?? currentShop?.id;
+
+    if (!storeId || storeId === "initial") {
+      storeId = storeIdParam ?? undefined;
+    }
+
     if (!storeId || storeId === "initial") {
       setCogsOverride([]);
       return;
@@ -115,7 +120,11 @@ function AssumptionsContent() {
 
   useEffect(() => {
     const storeIdParam = searchParams.get("store_id");
-    const storeId = currentShop?.store_id ?? currentShop?.id ?? storeIdParam;
+    let storeId = currentShop?.store_id ?? currentShop?.id;
+
+    if (!storeId || storeId === "initial") {
+      storeId = storeIdParam ?? undefined;
+    }
 
     if (!storeId || storeId === "initial") {
       setAssumptionMetrics(null);
@@ -268,12 +277,13 @@ function AssumptionsContent() {
 
         <main className="flex-1 overflow-y-auto bg-[#f8f9ff] p-6 sm:p-10">
           <div className="mx-auto flex max-w-[1600px] flex-col gap-8">
-            <header className="flex items-start justify-between gap-4">
+            <header className="flex flex-col-reverse gap-4 md:flex-row md:items-start md:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#9a9af5]">{t("assump.sectionLabel")}</p>
-                <h1 className="mt-2 text-4xl font-semibold text-[#2e2e6c]">{t("assump.sectionTitle")}</h1>
+                <h1 className="mt-2 text-3xl md:text-4xl font-semibold text-[#2e2e6c]">{t("assump.sectionTitle")}</h1>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between gap-2 md:justify-end">
+                {/* Language Switcher */}
                 <div className="flex items-center gap-1 rounded-full border border-[#d9ddff] bg-white p-1 shadow-sm">
                   {(["en", "th"] as const).map((lng) => (
                     <button
@@ -287,6 +297,8 @@ function AssumptionsContent() {
                     </button>
                   ))}
                 </div>
+
+                {/* Back Button */}
                 <button
                   type="button"
                   onClick={() => router.push("/dashboard")}

@@ -124,6 +124,8 @@ export default function MarketingPage() {
     }
   }, [status, router]);
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   const handleSelectStore = (nextId: string) => {
     if (!nextId || nextId === storeId) return;
     setError(null);
@@ -139,6 +141,20 @@ export default function MarketingPage() {
   return (
     <LocaleProvider>
       <div className="min-h-screen bg-white text-slate-900">
+
+        {/* Mobile Menu Overlay */}
+        {mobileMenuOpen && (
+          <PlannerSidebar
+            mobile
+            onLogout={() => signOut({ callbackUrl: "/login" })}
+            userName={session?.user?.name}
+            userEmail={session?.user?.email}
+            userImage={session?.user?.image}
+            selectedStoreId={storeId}
+            onClose={() => setMobileMenuOpen(false)}
+          />
+        )}
+
         <div className="flex min-h-screen">
           <PlannerSidebar
             onLogout={() => signOut({ callbackUrl: "/login" })}
@@ -149,29 +165,45 @@ export default function MarketingPage() {
           />
 
           <main className="flex-1 space-y-6 bg-[#f8f9ff] p-6 sm:p-10">
-            <header className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#9a9af5]">
-                  Marketing
-                </p>
-                <h1 className="mt-2 text-4xl font-semibold text-[#2e2e6c]">7P Analysis</h1>
-                <p className="mt-1 text-sm text-[#6b6f92]">
-                  เอกสารกลยุทธ์ 7P
-                </p>
+            <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex items-start gap-4">
+                {/* Hamburger Button */}
+                <button
+                  type="button"
+                  className="lg:hidden mt-1 p-2 -ml-2 text-slate-500 hover:text-[#4c4bd6] hover:bg-white rounded-xl transition"
+                  onClick={() => setMobileMenuOpen(true)}
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                  </svg>
+                </button>
+
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#9a9af5]">
+                    Marketing
+                  </p>
+                  <h1 className="mt-2 text-3xl font-semibold text-[#2e2e6c]">7P Analysis</h1>
+                  <p className="mt-1 text-sm text-[#6b6f92]">
+                    เอกสารกลยุทธ์ 7P
+                  </p>
+                </div>
               </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2 rounded-full border border-[#e6e9ff] bg-white px-4 py-2">
-                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a80a7]">
+
+              <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                <div className="flex flex-1 sm:flex-none items-center gap-2 rounded-full border border-[#e6e9ff] bg-white px-3 py-2">
+                  <span className="whitespace-nowrap text-[10px] font-bold uppercase tracking-wide text-[#7a80a7]">
                     เลือกร้าน
                   </span>
                   <select
-                    className="min-w-[180px] bg-transparent text-sm font-semibold text-[#2e2e6c] focus:outline-none"
+                    className="w-full sm:w-auto min-w-[100px] bg-transparent text-sm font-semibold text-[#2e2e6c] focus:outline-none"
                     value={storeId ?? ""}
                     onChange={(e) => handleSelectStore(e.target.value)}
                     disabled={storesLoading || loading || !stores.length}
                   >
                     <option value="" disabled>
-                      {storesLoading ? "กำลังโหลดร้าน..." : "เลือกร้าน"}
+                      {storesLoading ? "กำลังโหลด..." : "เลือกร้าน"}
                     </option>
                     {stores.map((store) => (
                       <option key={store.store_id} value={store.store_id ?? ""}>
@@ -180,29 +212,15 @@ export default function MarketingPage() {
                     ))}
                   </select>
                 </div>
-                <button
-                  className="rounded-full border border-[#d5d9ff] px-4 py-2 text-sm font-semibold text-[#4c4bd6] transition hover:border-[#4c4bd6] hover:bg-[#f4f4ff]"
-                  onClick={() => {
-                    if (!loading && storeId) {
-                      setPdfUrl(null);
-                      setLoading(true);
-                      fetch(`/api/marketing/7p?store_id=${encodeURIComponent(storeId)}`)
-                        .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
-                        .then(({ ok, data }) => {
-                          if (!ok) {
-                            throw new Error(data.error || "ไม่สามารถดึงไฟล์ 7P ได้");
-                          }
-                          setPdfUrl(data.url ?? null);
-                        })
-                        .catch((err) => setError(err instanceof Error ? err.message : "โหลดไฟล์ไม่สำเร็จ"))
-                        .finally(() => setLoading(false));
-                    } else if (!storeId) {
-                      setError("กรุณาเลือกร้านค้าก่อนโหลดไฟล์");
-                    }
-                  }}
-                >
-                  รีเฟรชไฟล์
-                </button>
+                {pdfUrl && (
+                  <a
+                    href={pdfUrl}
+                    target="_blank"
+                    className="flex-1 sm:flex-none rounded-full border border-[#d5d9ff] px-4 py-2 text-sm font-semibold text-[#4c4bd6] transition hover:border-[#4c4bd6] hover:bg-[#f4f4ff] whitespace-nowrap"
+                  >
+                    ดาวน์โหลด
+                  </a>
+                )}
               </div>
             </header>
 

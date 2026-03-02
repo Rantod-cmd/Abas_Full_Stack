@@ -318,7 +318,7 @@ export function usePlannerState() {
   }, []);
 
   const fetchStoreSuggestion = useCallback(async (storeId?: string) => {
-    if (!storeId) return null;
+    if (!storeId || storeId === "initial") return null;
     const store = await fetchStoreByStoreId(storeId);
     const suggestAi = (store as { suggest_ai?: string } | null)?.suggest_ai;
     if (suggestAi) {
@@ -329,7 +329,7 @@ export function usePlannerState() {
   }, [fetchStoreByStoreId]);
 
   const fetchBusinessPlan = useCallback(async (storeId?: string | null) => {
-    if (!storeId) {
+    if (!storeId || storeId === "initial") {
       console.warn("⚠️ ไม่มี store_id สำหรับร้านนี้");
       return;
     }
@@ -440,8 +440,13 @@ export function usePlannerState() {
     }
   }, []);
 
-  const handleGeneratePlan = useCallback(async (payload: BoothForm) => {
+  const handleGeneratePlan = useCallback(async (FormData: BoothFormWithStore) => {
     try {
+      // Ensure store_id is included in the payload
+      const payload = { ...FormData };
+
+      console.log("🔄 Calling handleGeneratePlan with store_id:", payload.store_id);
+
       const response = await fetch("/api/ai/generate-plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -472,7 +477,7 @@ export function usePlannerState() {
         setProductMix(buildProductMixFromAssumptions(data.assumptions_debug));
       }
 
-      const ragAdvice = await fetchRagAdvice(payload);
+      const ragAdvice = await fetchRagAdvice(FormData);
       if (ragAdvice?.answer_text) {
         setAdvice(ragAdvice.answer_text);
       }
@@ -600,7 +605,14 @@ export function usePlannerState() {
       };
     } catch (err) {
       console.error("❌ ส่งข้อมูลไป AI ไม่สำเร็จ:", err);
-      setError("ไม่สามารถเชื่อมต่อระบบ AI ได้");
+      // พยายามดึง message จาก error object ถ้ามี
+      const msg = (err as Error).message;
+      if (msg && msg !== "AI ประมวลผลไม่สำเร็จ") {
+        setError(msg);
+      } else {
+        setError("ไม่สามารถเชื่อมต่อระบบ AI ได้ (Check backend logs)");
+      }
+      throw err; // Re-throw so handleSaveShop stops
     } finally {
 
     }
@@ -661,6 +673,11 @@ export function usePlannerState() {
         console.log("✅ JOB DONE — EXIT LOOP");
         return true;
       };
+
+      if (status === "error" || status === "failed") { // Fail Fast
+        console.warn("⛔ JOB FAILED — stop waiting");
+        throw new Error("Job execution failed");
+      }
 
       if (count++ > 60) {   // ~ 3 นาที
         console.warn("⛔ TIMEOUT — stop waiting");
@@ -786,7 +803,7 @@ export function usePlannerState() {
       // -------------------------
       // โหลดแผน (หลังทุกอย่างเสร็จ)
       // -------------------------
-      await handleGeneratePlan(form);
+      await handleGeneratePlan({ ...form, store_id: storeIdForAI ?? undefined });
 
       // -------------------------
       // อัปเดตโควต้า

@@ -31,6 +31,8 @@ export async function POST(req: Request) {
     console.log("FORM DATA RECEIVED:", body);
 
     const pythonAiUrl = process.env.PYTHON_AI_URL || DEFAULT_PYTHON_AI_URL;
+    console.log("🚀 [DEBUG] Calling Python AI at:", pythonAiUrl);
+
     const aiRequest = fetch(pythonAiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -41,15 +43,15 @@ export async function POST(req: Request) {
     const ragQuestion = buildRagQuestion(body);
     const ragPromise = ragQuestion
       ? fetch(resolveRagUrl(), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question: ragQuestion }),
-        }).then(async (res) => {
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok) throw new Error(data?.error || "RAG backend error");
-          return data;
-        })
-      : Promise.resolve(null); 
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: ragQuestion }),
+      }).then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error || "RAG backend error");
+        return data;
+      })
+      : Promise.resolve(null);
 
     const [aiRes, ragRes] = await Promise.allSettled([aiRequest, ragPromise]);
 
@@ -72,14 +74,27 @@ export async function POST(req: Request) {
     }
 
     if (ragResult?.answer_text && body?.store_id && supabaseAdmin) {
+      console.log("📝 Saving RAG result to Supabase for store_id:", body.store_id);
       try {
-        await supabaseAdmin
+        const { error: updateError } = await supabaseAdmin
           .from("set_store")
           .update({ suggest_ai: ragResult.answer_text })
           .eq("store_id", body.store_id);
+
+        if (updateError) {
+          console.error("❌ Supabase update failed:", updateError);
+        } else {
+          console.log("✅ Supabase update successful");
+        }
       } catch (err) {
-        console.warn("⚠️ บันทึก RAG ลง set_store ไม่สำเร็จ:", err);
+        console.error("⚠️ Exception during Supabase update:", err);
       }
+    } else {
+      console.log("⚠️ Skipping RAG save. missing:", {
+        hasAnswer: !!ragResult?.answer_text,
+        hasStoreId: !!body?.store_id,
+        hasSupabaseAdmin: !!supabaseAdmin
+      });
     }
 
     return NextResponse.json({ ...aiResult, rag_result: ragResult });

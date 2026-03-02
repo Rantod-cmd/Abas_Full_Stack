@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { store_id } = body;
 
-    if (!store_id) {
+    if (!store_id || store_id === "initial") {
       return NextResponse.json(
         { error: "store_id จำเป็นต้องระบุ" },
         { status: 400 }

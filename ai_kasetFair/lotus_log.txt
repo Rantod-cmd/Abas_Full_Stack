@@ -1,0 +1,71 @@
+
+--- Testing Keyword Payload ---
+{"keyword": "chicken", "limit": 15, "page": 1}
+Status: 200
+Found 15 products
+{
+  "id": 22342,
+  "deliveryMethod": [
+    "HD",
+    "HDND",
+    "CCND"
+  ],
+  "deliveryType": [
+    "OD",
+    "SFL"
+  ],
+  "finalPricePerUOW": 76,
+  "regularPricePerUOW": 76,
+  "loyaltyMemberPricePerUOW": 0,
+  "isInstallmentSupport": false,
+  "maxQuantityOfProduct": 10000,
+  "minQuantityOfProduct": 1,
+  "name": "ซีพี อกไก่ล้วนมีหนัง กก.ละ",
+  "priceRange": {
+    "minimumPrice": {
+      "regularPrice": {
+        "value": 15.2,
+        "currency": "THB",
+        "currencyPrefix": "฿"
+      },
+      "finalPrice": {
+        "value": 15.2,
+        "currency": "THB",
+        "currencyPrefix": "฿"
+      },
+      "loyaltyMemberPrice": {
+        "value": 0,
+        "currency": "THB",
+        "currencyPrefix": "฿"
+      },
+      "discount": {
+        "amountOff": 0,
+        "percentOff": 0,
+        "displayNumber": 0,
+        "displayText": ""
+      }
+    }
+  },
+  "promotions": [],
+  "sellingType": "weight",
+  "sku": "51264894",
+  "thumbnail": {
+    "label": "",
+    "types": [
+      "thumbnail",
+      "image"
+    ],
+    "url": "https://o2o-static.lotuss.com/products/107486/51264894.jpg"
+  },
+  "unitOfQuantity": "Kg",
+  "unitOfWeight": "Kg",
+  "urlKey": "cp-chicken-breast-5-kg-51264894",
+  "weight": 0.2,
+  "weightPerPiece": 0.2,
+  "recommendationVectorAttached": true,
+  "width": 5,
+  "length": 17,
+  "height": 12,
+  "stockStatus": "IN_STOCK",
+  "stockOnHand": 9999
+}

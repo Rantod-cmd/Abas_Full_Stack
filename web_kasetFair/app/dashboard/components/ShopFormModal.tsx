@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react"; // ✅ Import useEffect
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,6 +34,14 @@ export function ShopFormModal({
   isEdit = false, // ← ค่า default = เพิ่มร้าน
 }: ShopFormModalProps) {
   const { t } = useLocale();
+
+  // ✅ Auto-set default category if empty
+  useEffect(() => {
+    if (open && !form.category) {
+      onChange({ category: CATEGORY_OPTIONS[0].value });
+    }
+  }, [open]);
+
   if (!open) return null;
 
   return (

@@ -54,6 +54,7 @@ function DashboardContent() {
   } = usePlannerState();
   const { t } = useLocale();
   const [assumptionFileLoading, setAssumptionFileLoading] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const averageCustomers = financialRows.length
     ? Math.round(summary.customers / financialRows.length)
@@ -141,7 +142,28 @@ function DashboardContent() {
   return (
     <div className="min-h-screen bg-white text-slate-900">
       <LoadingOverlay loading={loading} />
+
+      {/* Mobile Menu */}
+      {/* Note: In my previous edit I handled mobile visibility inside PlannerSidebar using 'mobile' prop. 
+          However, usually we want to control 'rendering' or 'visibility' from here. 
+          If PlannerSidebar handles rendering itself based on 'mobile' prop + internal logic, we just need to pass the prop.
+          Wait, my previous edit uses `if (mobile) return ...` which renders a fixed overlay. 
+          So we should only render this instance if mobileMenuOpen is true.
+      */}
+      {mobileMenuOpen && (
+        <PlannerSidebar
+          mobile
+          onLogout={() => signOut({ callbackUrl: "/login" })}
+          userName={session?.user?.name}
+          userEmail={session?.user?.email}
+          userImage={session?.user?.image}
+          selectedStoreId={currentShop?.store_id || currentShop?.id || null}
+          onClose={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       <div className="flex min-h-screen">
+        {/* Desktop Sidebar (hidden on mobile via CSS inside component) */}
         <PlannerSidebar
           onLogout={() => signOut({ callbackUrl: "/login" })}
           userName={session?.user?.name}
@@ -149,6 +171,7 @@ function DashboardContent() {
           userImage={session?.user?.image}
           selectedStoreId={currentShop?.store_id || currentShop?.id || null}
         />
+
         <main className="flex-1 space-y-6 bg-[#f8f9ff] p-6 sm:p-8 overflow-y-auto">
           <PlannerHeader
             userName={session?.user?.name}
@@ -161,6 +184,7 @@ function DashboardContent() {
             assumptionFileLoading={assumptionFileLoading}
             onDownloadAssumption={handleDownloadAssumptionFile}
             canDownloadAssumption={Boolean(currentShop?.store_id || currentShop?.id)}
+            onOpenMobileMenu={() => setMobileMenuOpen(true)}
           />
 
           {!loading && !metrics?.daily?.length && !financialRows.length ? (

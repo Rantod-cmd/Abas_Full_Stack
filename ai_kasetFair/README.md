@@ -9,7 +9,9 @@ FastAPI service that uses OpenAI to generate Thai-language business advice and a
    `python -m pip install -r requirement.txt`
 3) Configure environment:  
    - Copy `.env.example` to `.env`  
-   - Set `OPENAI_API_KEY=your-key`
+   - Set `OPENAI_API_KEY=your-key`  
+   - Add Supabase credentials (`SUPABASE_URL`, `SUPABASE_KEY`) if you want results persisted; without them the API still runs but skips database writes.  
+   - Set `FRONTEND_ORIGIN` if your frontend origin differs from `http://localhost:3000`.
 4) Run the dev server:  
    `uvicorn main:app --reload` (defaults to http://127.0.0.1:8000)
 
@@ -23,6 +25,10 @@ FastAPI service that uses OpenAI to generate Thai-language business advice and a
   - `advice_markdown`: Thai Markdown guidance.
   - `financial_csv`: CSV string with daily projections.
   - `assumptions_debug`: JSON assumptions used for calculations.
+
+Other endpoints:
+- `POST /ai` — accepts the fuller booth form (see `schemas.UserQuery`).
+- `POST /rag` — retrieval QA over files in `data_rag/` (build index with `python rag.py` if needed).
 
 ## Project Structure
 - `main.py` — FastAPI app, CORS, routing.
