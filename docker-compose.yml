@@ -1,0 +1,35 @@
+services:
+  ai:
+    build:
+      context: ./ai_kasetFair
+      dockerfile: Dockerfile
+    container_name: kasetfair_ai
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./ai_kasetFair/.env
+    restart: unless-stopped
+    networks:
+      - kasetfair_net
+
+  web:
+    build:
+      context: ./web_kasetFair
+      dockerfile: Dockerfile
+    container_name: kasetfair_web
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./web_kasetFair/.env
+    environment:
+      - PYTHON_AI_URL=http://ai:8000/ai
+      - PYTHON_RAG_URL=http://ai:8000/rag
+    depends_on:
+      - ai
+    restart: unless-stopped
+    networks:
+      - kasetfair_net
+
+networks:
+  kasetfair_net:
+    driver: bridge
