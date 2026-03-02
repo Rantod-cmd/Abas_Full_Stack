@@ -29,6 +29,8 @@ function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
+  const ADMIN_ID = "9460055f-c144-4b9c-bbd9-aa27486615fe";
+  const isAdmin = session?.user?.id === ADMIN_ID;
   const {
     advice,
     assumptions,
@@ -55,6 +57,7 @@ function DashboardContent() {
   const { t } = useLocale();
   const [assumptionFileLoading, setAssumptionFileLoading] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [dailyFinancialData, setDailyFinancialData] = useState<any[]>([]);
 
   const averageCustomers = financialRows.length
     ? Math.round(summary.customers / financialRows.length)
@@ -80,6 +83,34 @@ function DashboardContent() {
       }
     }
   }, [searchParams, shops, selectedShopId, handleSelectShop]);
+
+  // Fetch daily financial data when shop is selected
+  useEffect(() => {
+    const storeId = currentShop?.store_id || currentShop?.id;
+    if (!storeId || storeId === "initial") {
+      setDailyFinancialData([]);
+      return;
+    }
+
+    const fetchDailyData = async () => {
+      try {
+        const res = await fetch("/api/store/daily-financial", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ store_id: storeId }),
+        });
+        const data = await res.json();
+        console.log("FE: Daily Data received:", data);
+        if (data.dailyData) {
+          setDailyFinancialData(data.dailyData);
+        }
+      } catch (err) {
+        console.error("Error fetching daily financial data:", err);
+      }
+    };
+
+    fetchDailyData();
+  }, [currentShop]);
 
   const handleDownloadAssumptionFile = useCallback(async () => {
     if (assumptionFileLoading) return;
@@ -176,6 +207,7 @@ function DashboardContent() {
           <PlannerHeader
             userName={session?.user?.name}
             sessionEmail={session?.user?.email}
+            sessionUserId={session?.user?.id}
             shops={shops}
             selectedShopId={selectedShopId}
             onSelectShop={handleSelectShop}
@@ -198,6 +230,7 @@ function DashboardContent() {
                 rows={financialRows}
                 metricsDaily={metrics?.daily}
                 loading={loading}
+                dailyFinancialData={dailyFinancialData}
               />
             </div>
             <div className="xl:flex-[1]">
@@ -227,7 +260,7 @@ function DashboardContent() {
 
           <FinancialTableCard
             rows={financialRows}
-            metricsDaily={metrics?.daily}
+            metricsDaily={dailyFinancialData.length > 0 ? dailyFinancialData : metrics?.daily}
             metricsProducts={metrics?.products}
             userId={session?.user?.id}
             error={error}
@@ -245,6 +278,7 @@ function DashboardContent() {
         onClose={() => setShowModal(false)}
         onSave={handleSaveShop}
         isEdit={isEdit}
+        isAdmin={isAdmin}
       />
     </div>
   );

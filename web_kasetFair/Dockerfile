@@ -1,17 +1,19 @@
-# Stage 1: Install dependencies
+# Stage 1: Install dependencies (without Prisma)
 FROM node:20-alpine AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN PRISMA_SKIP_POSTINSTALL_GENERATE=true npm ci
+RUN npm ci --ignore-scripts
 
 # Stage 2: Build
 FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/package.json ./package.json
 COPY . .
 
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 RUN npm run build
 
 # Stage 3: Production runner

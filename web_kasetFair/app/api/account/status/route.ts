@@ -6,6 +6,8 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 export async function GET() {
   const session = await getServerSession(authOptions);
 
+  console.log("sessionId : ", session?.user?.id);
+
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -22,7 +24,7 @@ export async function GET() {
     return NextResponse.json({ error: "ไม่สามารถตรวจสอบสถานะได้" }, { status: 500 });
   }
 
-  return NextResponse.json({ status: Boolean(data?.status) }, { status: 200 });
+  return NextResponse.json({ status: data?.status === true }, { status: 200 });
 }
 
 export async function POST() {
@@ -32,15 +34,24 @@ export async function POST() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  let statusValue: boolean;
+
+  if (session.user.id === "9460055f-c144-4b9c-bbd9-aa27486615fe") {
+    statusValue = false;
+  } else {
+    statusValue = true;
+  }
+
   const { error } = await supabaseAdmin
-    .from("accounts")
-    .update({ status: true })
-    .eq("user_id", session.user.id);
+      .from("accounts")
+      .update({ status: statusValue })
+      .eq("user_id", session.user.id);
 
   if (error) {
     console.error("Failed to update account status:", error.message);
     return NextResponse.json({ error: "อัปเดตสถานะไม่สำเร็จ" }, { status: 500 });
   }
 
-  return NextResponse.json({ status: true }, { status: 200 });
+  // 👉 ตอนนี้จะส่งค่าที่ถูกต้อง
+  return NextResponse.json({ status: statusValue }, { status: 200 });
 }

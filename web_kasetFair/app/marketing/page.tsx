@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { PlannerSidebar } from "../dashboard/components/PlannerSidebar";
 import { LocaleProvider } from "../dashboard/i18n";
 
+import { PDFViewer } from "./components/PDFViewer";
+
 type StoreSummary = {
   store_id?: string | null;
   name?: string | null;
@@ -125,6 +127,7 @@ export default function MarketingPage() {
   }, [status, router]);
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const handleSelectStore = (nextId: string) => {
     if (!nextId || nextId === storeId) return;
@@ -132,6 +135,40 @@ export default function MarketingPage() {
     setPdfUrl(null);
     setStoreId(nextId);
     syncStoreQueryParam(nextId);
+  };
+
+  const handleDownload = async () => {
+    if (!pdfUrl) return;
+
+    try {
+      setDownloading(true);
+      const res = await fetch(pdfUrl);
+      if (!res.ok) throw new Error("Network response was not ok");
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+
+      // Construct filename from store name if available
+      const storeName = stores.find(s => s.store_id === storeId)?.name || storeId || "7P_Analysis";
+      // Sanitize filename
+      const safeName = storeName.replace(/[^a-z0-9ก-๙]/gi, "_");
+      a.download = `7P_Analysis_${safeName}.pdf`;
+
+      document.body.appendChild(a);
+      a.click();
+
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error("Download failed:", err);
+      // Fallback to opening in new tab if download fails
+      window.open(pdfUrl, "_blank");
+    } finally {
+      setDownloading(false);
+    }
   };
 
   if (status === "loading") {
@@ -213,24 +250,25 @@ export default function MarketingPage() {
                   </select>
                 </div>
                 {pdfUrl && (
-                  <a
-                    href={pdfUrl}
-                    target="_blank"
-                    className="flex-1 sm:flex-none rounded-full border border-[#d5d9ff] px-4 py-2 text-sm font-semibold text-[#4c4bd6] transition hover:border-[#4c4bd6] hover:bg-[#f4f4ff] whitespace-nowrap"
+                  <button
+                    type="button"
+                    onClick={handleDownload}
+                    disabled={downloading}
+                    className="flex-1 sm:flex-none rounded-full border border-[#d5d9ff] px-4 py-2 text-sm font-semibold text-[#4c4bd6] transition hover:border-[#4c4bd6] hover:bg-[#f4f4ff] whitespace-nowrap disabled:opacity-50 disabled:cursor-wait"
                   >
-                    ดาวน์โหลด
-                  </a>
+                    {downloading ? "กำลังโหลด..." : "ดาวน์โหลด"}
+                  </button>
                 )}
               </div>
             </header>
 
-            <section className="flex-1 rounded-3xl border border-[#e6e9ff] bg-white p-4 shadow-sm">
+            <section className="flex-1 h-[75vh] w-full rounded-3xl border border-[#e6e9ff] bg-white p-4 shadow-sm overflow-hidden">
               {loading ? (
-                <div className="flex h-[70vh] items-center justify-center text-sm text-[#7a80a7]">
+                <div className="flex h-full items-center justify-center text-sm text-[#7a80a7]">
                   กำลังโหลดไฟล์ 7P...
                 </div>
               ) : error ? (
-                <div className="flex h-[70vh] flex-col items-center justify-center gap-3 text-center text-sm text-rose-500">
+                <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-sm text-rose-500">
                   <p>{error}</p>
                   <button
                     className="rounded-full border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-600"
@@ -255,13 +293,9 @@ export default function MarketingPage() {
                   </button>
                 </div>
               ) : pdfUrl ? (
-                <iframe
-                  src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0`}
-                  className="h-[75vh] w-full rounded-2xl border border-[#e6e9ff]"
-                  title="7P Analysis PDF"
-                />
+                <PDFViewer url={pdfUrl} />
               ) : (
-                <div className="flex h-[70vh] items-center justify-center text-sm text-[#7a80a7]">
+                <div className="flex h-full items-center justify-center text-sm text-[#7a80a7]">
                   ไม่พบไฟล์ 7P สำหรับแสดงผล
                 </div>
               )}

@@ -75,19 +75,13 @@ export function PlannerSidebar({
     <div className="flex h-full flex-col justify-between">
       <div className="space-y-8">
         <div className="flex items-center gap-3 rounded-2xl border border-[#e6e7fb] bg-white p-4 shadow-sm">
-          {userImage ? (
-            <div className="relative h-12 w-12 overflow-hidden rounded-2xl ring-2 ring-[#e4e7ff]">
-              <div
-                className="h-full w-full bg-cover bg-center"
-                style={{ backgroundImage: `url(${userImage})` }}
-                aria-label={displayName}
-              />
-            </div>
-          ) : (
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#eef0ff] text-base font-semibold text-[#4c4bd6]">
-              {initials}
-            </div>
-          )}
+          <div className="relative h-12 w-12 overflow-hidden rounded-2xl ring-2 ring-[#e4e7ff]">
+            <div
+              className="h-full w-full bg-cover bg-center"
+              style={{ backgroundImage: "url(/favicon.ico)" }}
+              aria-label="Logo"
+            />
+          </div>
           <div className="overflow-hidden">
             <p className="truncate text-base font-semibold text-[#2f3266]">{displayName}</p>
           </div>

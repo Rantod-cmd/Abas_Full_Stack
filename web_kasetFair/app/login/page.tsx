@@ -33,7 +33,7 @@ export default async function LoginPage() {
 
           <div className="flex items-center justify-center hover:scale-105 transition-transform duration-500">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/favicon.ico" alt="ABAS Logo" className="h-48 w-48 object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]" />
+            <img src="/Axis_Solutions-logo.png" alt="ABAS Logo" className="h-48 w-48 object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]" />
           </div>
 
           <div className="space-y-4 max-w-md flex flex-col items-center">

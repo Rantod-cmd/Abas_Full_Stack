@@ -24,98 +24,105 @@ export function SummaryCards({
 }: SummaryCardsProps) {
   const [planData, setPlanData] = useState<BusinessPlanRow | null>(null);
   const [planLoading, setPlanLoading] = useState(false);
-
+  const [dbRevenue, setDbRevenue] = useState(0);
+  const [dbCogs, setDbCogs] = useState(0);
+  const [dbOpex, setDbOpex] = useState(0);
+  const [dbNetProfit, setDbNetProfit] = useState(0);
   useEffect(() => {
-    let cancelled = false;
-
-    async function loadPlan() {
-      if (!storeId) {
-        setPlanData(null);
-        return;
-      }
-
-      setPlanLoading(true);
+    if (!storeId) return;
+    const fetchFinancialData = async () => {
       try {
-        const res = await fetch("/api/store/business-plan", {
+        // Fetch Revenue
+        const revenueRes = await fetch("/api/store/revenue_table", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ store_id: storeId }),
         });
-
-        if (!res.ok) {
-          if (!cancelled) setPlanData(null);
-          return;
+        const revenueData = await revenueRes.json();
+        console.log("Revenue API Response:", revenueData);
+        if (revenueData.totalRevenue) {
+          setDbRevenue(revenueData.totalRevenue);
         }
-
-        const data = (await res.json()) as BusinessPlanRow | { data: null };
-        if (!cancelled) {
-          if ("data" in data && data.data === null) {
-            setPlanData(null);
-          } else {
-            setPlanData(data as BusinessPlanRow);
-          }
+        if (revenueData.netProfit) {
+          setDbNetProfit(revenueData.netProfit);
         }
-      } catch {
-        if (!cancelled) setPlanData(null);
-      } finally {
-        if (!cancelled) setPlanLoading(false);
+        // Fetch COGS
+        const cogsRes = await fetch("/api/store/cog_table", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ store_id: storeId }),
+        });
+        const cogsData = await cogsRes.json();
+        console.log("COGS API Response:", cogsData);
+        if (cogsData.totalCog) {
+          setDbCogs(cogsData.totalCog);
+        }
+        // Fetch OpEx
+        const opexRes = await fetch("/api/store/opex_table", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ store_id: storeId }),
+        });
+        const opexData = await opexRes.json();
+        console.log("OpEx API Response:", opexData);
+        if (opexData.totalOpex) {
+          setDbOpex(opexData.totalOpex);
+        }
+      } catch (err) {
+        console.error(err);
       }
-    }
-
-    loadPlan();
-    return () => {
-      cancelled = true;
     };
+    fetchFinancialData();
   }, [storeId]);
 
-  const totalRevenue = planData?.total_revenue ?? metricsSummary?.total_revenue ?? revenue;
-  const csvRows = useMemo(() => {
-    if (!planData?.financial_csv) return [];
-    return parseFinancialCsv(planData.financial_csv);
-  }, [planData?.financial_csv]);
+  const totalRevenue = dbRevenue || planData?.total_revenue || revenue;
+  /*  const csvRows = useMemo(() => {
+      if (!planData?.financial_csv) return [];
+      return parseFinancialCsv(planData.financial_csv);
+    }, [planData?.financial_csv]);*/
 
-  const csvTotalCogs = useMemo(
-    () =>
-      csvRows.reduce((sum, row) => {
-        const cogs = row.cogs ?? row.expense ?? 0;
-        return sum + cogs;
-      }, 0),
-    [csvRows],
-  );
+  /* const csvTotalCogs = useMemo(
+     () =>
+       csvRows.reduce((sum, row) => {
+         const cogs = row.cogs ?? row.expense ?? 0;
+         return sum + cogs;
+       }, 0),
+     [csvRows],
+   );
+ 
+   const csvTotalOpex = useMemo(
+     () =>
+       csvRows.reduce((sum, row) => {
+         return sum + (row.opex ?? 0);
+       }, 0),
+     [csvRows],
+   );*/
 
-  const csvTotalOpex = useMemo(
-    () =>
-      csvRows.reduce((sum, row) => {
-        return sum + (row.opex ?? 0);
-      }, 0),
-    [csvRows],
-  );
-
-  const totalCogs = csvRows.length ? csvTotalCogs : metricsSummary?.total_cogs ?? 0;
-  const totalOpex = csvRows.length ? csvTotalOpex : metricsSummary?.total_opex ?? 0;
-  const netProfit = planData?.net_profit ?? metricsSummary?.net_profit ?? metricsSummary?.gross_profit ?? (totalRevenue - totalCogs);
+  const totalCogs = dbCogs || metricsSummary?.total_cogs || 0;
+  const totalOpex = dbOpex || metricsSummary?.total_opex || 0;
+  const netProfit = dbNetProfit || metricsSummary?.net_profit || 0;
   const isLoading = loading || planLoading;
 
   const statItems = [
     {
       title: "Total Revenue",
       value: totalRevenue,
-      delta: "+0.0%",
+      /*delta: "+0.0%",*/
     },
     {
       title: "Total COGS",
       value: totalCogs,
-      delta: "-0.0%",
+      /*delta: "-0.0%",*/
     },
     {
       title: "Net Profit",
       value: netProfit,
-      delta: "+0.0%",
+      /*delta: "+0.0%", */
     },
     {
       title: "OpEX",
       value: totalOpex,
-      delta: "-0.0%",
+      /* delta: "-0.0%",*/
     },
   ];
 
@@ -140,7 +147,7 @@ export function SummaryCards({
               </p>
             </div>
             <span className="text-[11px] font-semibold text-[#7a80a7]">
-              {item.delta}
+              {/*{item.delta}*/}
             </span>
           </div>
         </Card>

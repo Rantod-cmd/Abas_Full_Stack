@@ -170,6 +170,16 @@ export function usePlannerState() {
     items: 0,
   });
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("lastSelectedShopId");
+      if (saved) {
+        setPreferredStoreId(saved);
+        setSelectedShopId(saved);
+      }
+    }
+  }, []);
+
   const parsedFinancialRows = useMemo(() => parseFinancialCsv(financialCsv), [financialCsv]);
 
   const metricsFinancialRows = useMemo(() => {
@@ -216,7 +226,7 @@ export function usePlannerState() {
         localStorage.removeItem("pending_job_id");
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .finally(() => setLoading(false));
   }, []);
 
   const loadUserStores = useCallback(async () => {
@@ -317,17 +327,6 @@ export function usePlannerState() {
     }
   }, []);
 
-  const fetchStoreSuggestion = useCallback(async (storeId?: string) => {
-    if (!storeId || storeId === "initial") return null;
-    const store = await fetchStoreByStoreId(storeId);
-    const suggestAi = (store as { suggest_ai?: string } | null)?.suggest_ai;
-    if (suggestAi) {
-      setAdvice(suggestAi);
-      return store;
-    }
-    return store;
-  }, [fetchStoreByStoreId]);
-
   const fetchBusinessPlan = useCallback(async (storeId?: string | null) => {
     if (!storeId || storeId === "initial") {
       console.warn("⚠️ ไม่มี store_id สำหรับร้านนี้");
@@ -381,6 +380,9 @@ export function usePlannerState() {
       console.log("🔄 Select shop ID:", id);
       setPreferredStoreId(id);
       setSelectedShopId(id);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("lastSelectedShopId", id);
+      }
     },
     [setPreferredStoreId]
   );
@@ -396,34 +398,12 @@ export function usePlannerState() {
     if (!storeId || storeId === "initial") return;
 
     fetchBusinessPlan(storeId);
-    fetchStoreSuggestion(storeId);
   }, [
     currentShop?.store_id,
     currentShop?.id,
     fetchBusinessPlan,
-    fetchStoreSuggestion,
     skipAutoFetchPlan,
   ]);
-
-  const fetchRagAdvice = useCallback(async (payload: BoothForm) => {
-    const question = buildRagQuestion(payload);
-    if (!question.trim()) return null;
-    try {
-      const response = await fetch("/api/rag", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question }),
-      });
-      if (!response.ok) {
-        console.warn("⚠️ RAG backend ไม่พร้อมใช้งาน");
-        return null;
-      }
-      return (await response.json()) as RagResponse;
-    } catch (err) {
-      console.error("❌ ไม่สามารถดึงคำแนะนำ RAG:", err);
-      return null;
-    }
-  }, []);
 
   const fetchMerchantCode = useCallback(async () => {
     try {
@@ -476,15 +456,10 @@ export function usePlannerState() {
       } else {
         setProductMix(buildProductMixFromAssumptions(data.assumptions_debug));
       }
-
-      const ragAdvice = await fetchRagAdvice(FormData);
-      if (ragAdvice?.answer_text) {
-        setAdvice(ragAdvice.answer_text);
-      }
     } catch (err) {
       setError((err as Error).message || "เกิดข้อผิดพลาด");
     }
-  }, [fetchRagAdvice]);
+  }, []);
 
   // ฟังก์ชันดึง store_id จาก Supabase ตาราง set_store
   const getStoreIdByUserAndName = useCallback(async (shopName: string) => {
@@ -679,7 +654,7 @@ export function usePlannerState() {
         throw new Error("Job execution failed");
       }
 
-      if (count++ > 60) {   // ~ 3 นาที
+      if (count++ > 80) {   // ~ 3 นาที
         console.warn("⛔ TIMEOUT — stop waiting");
         return false;
       }
@@ -717,12 +692,14 @@ export function usePlannerState() {
       const statusRes = await fetch("/api/account/status");
       const statusPayload = await statusRes.json();
 
+      const isAdmin = userId == "9460055f-c144-4b9c-bbd9-aa27486615fe";
+
       if (!statusRes.ok) {
         setError(statusPayload.error || "ไม่สามารถตรวจสอบสถานะบัญชีได้");
         return;
       }
 
-      if (statusPayload.status === true) {
+      if (!isAdmin && statusPayload.status === true) {
         alert("คุณใช้โควต้าครบแล้ว");
         return;
       }
@@ -744,6 +721,7 @@ export function usePlannerState() {
         });
 
         const created = await res.json();
+        console.log("🚨 ADD SHOP RESPONSE:", created);
         const newId = created.id || created.store_id;
 
         if (!newId) {
@@ -794,9 +772,15 @@ export function usePlannerState() {
       console.log("🟡 job_id:", aiResult?.job_id);
 
       if (aiResult?.job_id) {
+        console.log("save job : ", aiResult.job_id);
         localStorage.setItem("pending_job_id", aiResult.job_id);
-        await waitJobUntilDone(aiResult.job_id);
-        localStorage.removeItem("pending_job_id");
+
+        try {
+          await waitJobUntilDone(aiResult.job_id);
+        } finally {
+          console.log("clean job");
+          localStorage.removeItem("pending_job_id");
+        }
       }
 
 

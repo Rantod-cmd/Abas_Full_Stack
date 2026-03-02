@@ -8,6 +8,7 @@ import { useLocale } from "../i18n";
 
 type PlannerHeaderProps = {
   sessionEmail?: string | null;
+  sessionUserId?: string | null;
   shops: Shop[];
   selectedShopId: string;
   onSelectShop: (id: string) => void;
@@ -22,8 +23,10 @@ type PlannerHeaderProps = {
 
 export function PlannerHeader({
   userName,
+  sessionEmail,
+  sessionUserId,
   shops,
-  selectedShopId,
+  selectedShopId, 
   onSelectShop,
   onAddShop,
   onEditShop,
@@ -34,6 +37,22 @@ export function PlannerHeader({
 }: PlannerHeaderProps) {
   const router = useRouter();
   const { t, locale, setLocale } = useLocale();
+  const [status, setStatus] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    async function loadStatus() {
+      try {
+        const res = await fetch("/api/account/status");
+        const json = await res.json();
+        setStatus(json.status);
+        console.log("status:", status);
+      } catch (err) {
+        console.error("Failed to load status", err);
+      }
+    }
+
+    loadStatus();
+  }, []);
   return (
     <header className="p-4 sm:p-6 space-y-6 bg-[#f8f9ff] relative mb-6">
       {/* Top Bar: Hamburger (Mobile) + Language Switcher */}
@@ -95,7 +114,7 @@ export function PlannerHeader({
 
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          {shops.length === 0 && (
+          {(status === false) && (
             <Button onClick={onAddShop} className="flex-1 sm:flex-none rounded-full px-5 text-white">
               {t("btn.addShop")}
             </Button>

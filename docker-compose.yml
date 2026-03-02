@@ -24,6 +24,7 @@ services:
     environment:
       - PYTHON_AI_URL=http://ai:8000/ai
       - PYTHON_RAG_URL=http://ai:8000/rag
+      - AI_BASE_URL=http://ai:8000
     depends_on:
       - ai
     restart: unless-stopped

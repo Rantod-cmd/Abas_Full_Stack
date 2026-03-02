@@ -122,7 +122,7 @@ export function ProductMixCard({
 }: ProductMixCardProps) {
   const { t } = useLocale();
   const [isDailyView, setIsDailyView] = useState(false);
-
+  const [selectedItem, setSelectedItem] = useState<{ name: string; value: number } | null>(null);
   const totalUnits =
     metricsProducts?.reduce((sum, product) => sum + (product.total_units || 0), 0) ??
     totalItems ??
@@ -201,6 +201,19 @@ export function ProductMixCard({
   const isRevenueMode = totalRevenueData.length > 0;
 
   const activeTotalValue = activeChartData.reduce((sum, item) => sum + (item.value || 0), 0);
+  // คำนวณของที่จะโชว์
+  const displayLabel = selectedItem ? selectedItem.name : "Pie Chart";
+
+  // ถ้ายังไม่เลือกสินค้า ให้โชว์ 0 / 0
+  // ถ้าเลือกสินค้าแล้ว ให้โชว์ ยอดขายสินค้า / ยอดขายรวม
+  const displayValue = selectedItem ? selectedItem.value : 0;
+  const displayTarget = selectedItem ? activeTotalValue : 0;
+
+  const displayPercent = (selectedItem && displayTarget > 0)
+    ? Math.min(100, Math.round((displayValue / displayTarget) * 100))
+    : 0;
+
+  const unitLabel = isRevenueMode ? "฿" : "pcs";
 
   const mainTooltipFormatter = (
     value: number | string,
@@ -317,6 +330,14 @@ export function ProductMixCard({
                       paddingAngle={4}
                       stroke="#f8f9ff"
                       strokeWidth={2}
+                      onClick={(data) => {
+                        if (selectedItem?.name === data.name) {
+                          setSelectedItem(null); // กดซ้ำเพื่อยกเลิก
+                        } else {
+                          setSelectedItem({ name: data.name, value: data.value }); // เลือกตัวใหม่
+                        }
+                      }}
+                      className="cursor-pointer"
                     >
                       {activeChartData.map((entry, index) => (
                         <Cell key={`cell-${entry.name}`} fill={`url(#mix-${index})`} />
@@ -335,18 +356,20 @@ export function ProductMixCard({
 
             <div className="w-full space-y-2">
               <div className="flex items-center justify-between text-sm text-[#7a80a7]">
-                <p>{t("mix.performance")}</p>
+                <p>{displayLabel}</p>
                 <p>
-                  {t("mix.sell")} {totalUnits ? formatNumber(totalUnits) : "-"} / {formatNumber(targetUnits)} pcs
+                  {formatNumber(displayValue)} / {formatNumber(displayTarget)} {unitLabel}
                 </p>
               </div>
               <div className="h-2 w-full rounded-full bg-[#eef0ff]">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#4c4bd6] to-[#a78bfa]"
-                  style={{ width: `${percentToTarget}%` }}
+                  className="h-full rounded-full bg-gradient-to-r from-[#4c4bd6] to-[#a78bfa] transition-all duration-500"
+                  style={{ width: `${Math.min(100, displayPercent * 2)}%` }}
                 />
               </div>
-              <p className="text-xs text-[#4c4bd6]">{t("mix.trend")}</p>
+              <p className="text-xs text-[#4c4bd6]">
+                {selectedItem ? `ยอดขาย ${displayPercent}% จากยอดขายรวม` : "ยอดขาย"}
+              </p>
             </div>
           </div>
         )}

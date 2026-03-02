@@ -22,6 +22,7 @@ type ShopFormModalProps = {
   onClose: () => void;
   onSave: () => void;
   isEdit?: boolean; // ← เพิ่ม prop นี้
+  isAdmin?: boolean;
 };
 
 export function ShopFormModal({
@@ -32,6 +33,7 @@ export function ShopFormModal({
   onClose,
   onSave,
   isEdit = false, // ← ค่า default = เพิ่มร้าน
+  isAdmin = false,
 }: ShopFormModalProps) {
   const { t } = useLocale();
 
@@ -45,106 +47,126 @@ export function ShopFormModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 px-4 py-8 backdrop-blur">
-      <div className="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-slate-200">
+    <div className="fixed inset-0 z-20 overflow-y-auto">
+      <div className="flex min-h-full items-center justify-center p-4 text-center">
+        {/* Backdrop */}
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur transition-opacity"
+          aria-hidden="true"
+          onClick={onClose}
+        />
 
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <p className="text-lg font-semibold text-slate-900">
-            {isEdit ? t("modal.editShop") : t("modal.newShop")}
-          </p>
-          <button
-            onClick={onClose}
-            className="rounded-full px-3 py-1 text-sm font-semibold text-slate-500 hover:bg-slate-100"
-          >
-            {t("btn.close")}
-          </button>
-        </div>
+        {/* Modal Panel */}
+        <div className="relative w-full max-w-3xl transform rounded-2xl bg-white p-6 text-left shadow-2xl ring-1 ring-slate-200 transition-all">
 
-        {/* Form Inputs */}
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-          <LabeledInput
-            label={t("modal.name")}
-            value={form.name}
-            onChange={(value) => onChange({ name: value })}
-          />
-          <LabeledInput
-            label={t("modal.theme")}
-            value={form.theme}
-            onChange={(value) => onChange({ theme: value })}
-          />
-          <LabeledInput
-            label={t("modal.concept")}
-            value={form.concept}
-            onChange={(value) => onChange({ concept: value })}
-          />
-          <LabeledInput
-            label={t("modal.location")}
-            value={form.location}
-            onChange={(value) => onChange({ location: value })}
-            readOnly
-          />
-          <LabeledSelect
-            label={t("modal.category")}
-            value={form.category}
-            options={CATEGORY_OPTIONS}
-            onChange={(value) => onChange({ category: value })}
-          />
-          <LabeledInput
-            label={t("modal.size")}
-            value={form.size}
-            onChange={(value) => onChange({ size: value })}
-          />
-          <LabeledInput
-            label={t("modal.equipment")}
-            value={form.equipment}
-            onChange={(value) => onChange({ equipment: value })}
-          />
-          <LabeledInput
-            label={t("modal.funding")}
-            value={form.funding}
-            onChange={(value) => onChange({ funding: value })}
-          />
-          <LabeledInput
-            label={t("modal.staff")}
-            value={form.staff}
-            onChange={(value) => onChange({ staff: value })}
-          />
-          <LabeledInput
-            label={t("modal.hours")}
-            value={form.hours}
-            onChange={(value) => onChange({ hours: value })}
-          />
-
-          {/* Products textarea */}
-          <div className="md:col-span-2 space-y-1">
-            <label className="text-sm font-semibold text-slate-900">
-              {t("modal.products")}
-              <Textarea
-                value={form.products}
-                onChange={(e) => onChange({ products: e.target.value })}
-                rows={3}
-              />
-            </label>
-          </div>
-        </div>
-
-        {/* Footer buttons */}
-        <div className="mt-6 flex items-center justify-between gap-3">
-          {error ? <p className="text-sm text-rose-500">{error}</p> : <div />}
-
-          <div className="ml-auto flex gap-2">
-            <Button variant="outline" onClick={onClose}>
-              {t("btn.cancel")}
-            </Button>
-
-            {/* ปุ่มแก้ตามโหมด */}
-            <Button
-              onClick={onSave}
-              className="bg-emerald-500 text-white hover:bg-emerald-600"
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <p className="text-lg font-semibold text-slate-900">
+              {isEdit ? t("modal.editShop") : t("modal.newShop")}
+            </p>
+            <button
+              onClick={onClose}
+              className="rounded-full px-3 py-1 text-sm font-semibold text-slate-500 hover:bg-slate-100"
             >
-              {isEdit ? t("btn.update") : t("btn.createPlan")}
-            </Button>
+              {t("btn.close")}
+            </button>
+          </div>
+
+          {/* Form Inputs */}
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+            <LabeledInput
+              label={t("modal.name")}
+              value={form.name}
+              onChange={(value) => onChange({ name: value })}
+              placeholder="ระบุชื่อร้านของคุณ เช่น ร้านไก่ทอด"
+            />
+            <LabeledInput
+              label={t("modal.theme")}
+              value={form.theme}
+              onChange={(value) => onChange({ theme: value })}
+              placeholder="ระบุธีมของร้าน เช่น ธีมสีแดงขาวเหมือน KFC"
+            />
+            <LabeledInput
+              label={t("modal.concept")}
+              value={form.concept}
+              onChange={(value) => onChange({ concept: value })}
+              placeholder="ระบุคอนเซ็ปต์ของร้าน เช่น ไก่ทอดสดใหม่ทุกวัน"
+            />
+            <LabeledInput
+              label={t("modal.location")}
+              value={form.location}
+              onChange={(value) => onChange({ location: value })}
+              readOnly={!isAdmin}
+            />
+            <LabeledSelect
+              label={t("modal.category")}
+              value={form.category}
+              options={CATEGORY_OPTIONS}
+              onChange={(value) => onChange({ category: value })}
+            />
+            <LabeledInput
+              label={t("modal.size")}
+              value={form.size}
+              onChange={(value) => onChange({ size: value })}
+              placeholder="ระบุขนาดของร้าน เช่น 2 x 2 เมตร"
+            />
+            <LabeledInput
+              label={t("modal.equipment")}
+              value={form.equipment}
+              onChange={(value) => onChange({ equipment: value })}
+              placeholder="ระบุเครื่องมือของร้าน เช่น เครื่องปั่น"
+            />
+            <LabeledInput
+              label={t("modal.funding")}
+              value={form.funding}
+              onChange={(value) => onChange({ funding: value })}
+              placeholder="ระบุราคาต้นทุน เช่น 10,000 บาท"
+            />
+            <LabeledInput
+              label={t("modal.staff")}
+              value={form.staff}
+              onChange={(value) => onChange({ staff: value })}
+              placeholder="ระบุจำนวนพนักงาน เช่น 3 คน (เจ้าของร้าน 1 คน ช่วยเหลือ 2 คน)"
+            />
+            <LabeledInput
+              label={t("modal.hours")}
+              value={form.hours}
+              onChange={(value) => onChange({ hours: value })}
+              placeholder="ระบุเวลาที่เปิดให้บริการ เช่น 08.00 - 20.00 น."
+            />
+
+            {/* Products textarea */}
+            <div className="md:col-span-2 space-y-1">
+              <label className="text-sm font-semibold text-slate-900">
+                {t("modal.products")}
+                <Textarea
+                  value={form.products}
+                  onChange={(e) => onChange({ products: e.target.value })}
+                  rows={3}
+                  className="mt-1"
+                  placeholder="ระบุสินค้าที่ขาย เช่น ไก่ทอด 3 เมนู ไก่ทอดวิงแซ่บ 49 บาท ไก่ทอดสาหร่าย 59 บาท และ ไก่ทอดหมาล่า 69 บาท"
+                />
+              </label>
+            </div>
+          </div>
+
+          {/* Footer buttons */}
+          <div className="mt-6 flex items-center justify-between gap-3">
+            {error ? <p className="text-sm text-rose-500">{error}</p> : <div />}
+
+            <div className="ml-auto flex gap-2">
+              <Button variant="outline" onClick={onClose}>
+                {t("btn.cancel")}
+              </Button>
+
+              {/* ปุ่มแก้ตามโหมด */}
+              <Button
+                onClick={onSave}
+                className="bg-emerald-500 text-white hover:bg-emerald-600"
+              >
+                {isEdit ? t("btn.update") : t("btn.createPlan")}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -157,11 +179,14 @@ function LabeledInput({
   value,
   onChange,
   readOnly = false,
+  placeholder,
+
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   readOnly?: boolean;
+  placeholder?: string;
 }) {
   return (
     <label className="text-sm font-semibold text-slate-900">
@@ -173,6 +198,7 @@ function LabeledInput({
         readOnly={readOnly}
         aria-readonly={readOnly}
         disabled={readOnly}
+        placeholder={placeholder}
       />
     </label>
   );
@@ -186,6 +212,8 @@ function LabeledSelect({
 }: {
   label: string;
   value: string;
+  readOnly?: boolean;
+  placeholder?: string;
   options: Array<{ value: string; label: string }>;
   onChange: (value: string) => void;
 }) {

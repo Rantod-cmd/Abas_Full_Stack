@@ -1,16 +1,7 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Supabase Service Role environment variables (SUPABASE_URL/SUPABASE_SERVICE_KEY) are not set.');
-}
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { supabaseAdmin as supabase } from "@/lib/supabaseAdmin";
 
 export type BoothForm = {
   name: string;
@@ -27,7 +18,6 @@ export type BoothForm = {
 };
 
 export async function POST(request: Request) {
-
   try {
     const session = await getServerSession(authOptions);
 
@@ -39,27 +29,44 @@ export async function POST(request: Request) {
     }
 
     const formData: BoothForm = await request.json();
+    const userId = session.user.id;
 
-    // 🔒 Enforce 1 Shop Per Account Limit
-    const { count, error: countError } = await supabase
-      .from('set_store')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', session.user.id);
+    // 👉 ตรวจว่าเป็น admin?
+    //const isAdmin = userId === "9460055f-c144-4b9c-bbd9-aa27486615fe";
+    const isAdmin = userId === "9";
+    //
+    // 1) CHECK STATUS แทนการนับจำนวนร้าน
+    //
+    const { data: account, error: statusError } = await supabase
+      .from("accounts")
+      .select("status")
+      .eq("user_id", userId)
+      .maybeSingle();
 
-    if (countError) {
-      console.error("Check existing shop failed:", countError);
-      return NextResponse.json({ error: "Failed to check existing shops" }, { status: 500 });
+    if (statusError) {
+      console.error("Check account status failed:", statusError);
+      return NextResponse.json(
+        { error: "ไม่สามารถตรวจสอบสถานะบัญชีได้" },
+        { status: 500 }
+      );
     }
 
-    if (count && count >= 1) {
+    // ถ้าไม่ใช่ admin และ status = true → ปิดสิทธิ์กด
+    if (!isAdmin && account?.status === true) {
       return NextResponse.json(
-        { error: "Quota Exceeded", message: "1 Account สามารถสร้างได้แค่ 1 ร้านค้าเท่านั้นครับ" },
+        {
+          error: "Quota Exceeded",
+          message: "คุณสร้างแผนไปแล้ว 1 ครั้ง",
+        },
         { status: 400 }
       );
     }
 
+    //
+    // 2) INSERT ร้านใหม่
+    //
     const insertData = {
-      user_id: session.user.id,
+      user_id: userId,
       name: formData.name,
       products: formData.products,
       theme: formData.theme,
@@ -74,7 +81,7 @@ export async function POST(request: Request) {
     };
 
     const { data: newShop, error } = await supabase
-      .from('set_store')
+      .from("set_store")
       .insert([insertData])
       .select()
       .single();
@@ -84,7 +91,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error: error.message,
-          message: "บันทึกร้านค้าล้มเหลว (ตรวจสอบ RLS Policy หรือ Field ในตาราง set_shop)"
+          message: "บันทึกร้านค้าล้มเหลว",
         },
         { status: 500 }
       );
@@ -92,20 +99,29 @@ export async function POST(request: Request) {
 
     const storeId = newShop?.store_id ?? newShop?.id ?? null;
 
+    //
+    // 3) อัปเดต accounts.status = true (ใช้สิทธิ์แล้ว)
+    //
+    if (!isAdmin) {
+      await supabase
+        .from("accounts")
+        .update({ status: false }) //(ถ้า false จะได้หลายครั้ง)
+        .eq("user_id", userId);
+    }
+
     return NextResponse.json(
       {
         ...newShop,
         store_id: storeId,
       },
-      { status: 200 },
+      { status: 200 }
     );
-
   } catch (err) {
     console.error("Internal Server Error:", err);
     return NextResponse.json(
       {
         error: (err as Error).message,
-        message: "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์"
+        message: "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์",
       },
       { status: 500 }
     );

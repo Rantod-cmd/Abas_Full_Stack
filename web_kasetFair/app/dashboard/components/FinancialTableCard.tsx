@@ -56,7 +56,7 @@ export function FinancialTableCard({
       }))
       : [];
 
-  const sourceRows = csvRows.length ? csvRows : metricRows;
+  const sourceRows = metricRows.length ? metricRows : csvRows;
 
   return (
     <Card className="border-[#e8eaff] shadow-sm">
@@ -119,7 +119,7 @@ export function FinancialTableCard({
                         row.profit < 0 ? "text-rose-500" : "text-emerald-600"
                       }
                     > */}
-                      {/* ฿{formatNumber(row.profit)} */}
+                    {/* ฿{formatNumber(row.profit)} */}
                     {/* </TableCell> */}
                   </TableRow>
                 ))}

@@ -10,8 +10,8 @@ export async function POST(req: Request) {
     }
 
     const { data, error } = await supabaseAdmin
-      .from("cogs")
-      .select("store_id, ingredient, unit_cost")
+      .from("cogs_store")
+      .select("store_id, name, price")
       .eq("store_id", storeId);
 
     if (error) {
@@ -25,10 +25,10 @@ export async function POST(req: Request) {
     }
 
     // ส่งกลับในรูปแบบ arrays ให้ frontend ใช้งานต่อ
-    const ingredient = rows.map((r) => r.ingredient);
-    const unit_cost = rows.map((r) => r.unit_cost);
+    const name = rows.map((r) => r.name);
+    const price = rows.map((r) => r.price);
 
-    return NextResponse.json({ store_id: storeId, ingredient, unit_cost });
+    return NextResponse.json({ store_id: storeId, name, price });
   } catch (err) {
     console.error("❌ /api/store/cogs error:", err);
     return NextResponse.json({ error: "เกิดข้อผิดพลาดในการโหลด COGS" }, { status: 500 });

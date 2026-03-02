@@ -16,7 +16,7 @@ export function LoadingOverlay({ loading }: LoadingOverlayProps) {
 
         <div className="space-y-2 text-center">
           <p className="text-lg font-semibold text-[#4c4bd6]">กำลังประมวลผล...</p>
-          <p className="text-sm text-[#7a80a7]">กรุณารอ 3-5 นาที ข้อมูลกำลังถูกสร้าง</p>
+          <p className="text-sm text-[#7a80a7]">กรุณารอ 3-5 นาที ข้อมูลกำลังถูกสร้าง และ ห้ามปิดหน้าเว็บหรือรีเฟรชหน้าเว็บ</p>
         </div>
 
         <div className="flex gap-2">

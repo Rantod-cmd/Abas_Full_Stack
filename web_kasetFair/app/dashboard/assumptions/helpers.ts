@@ -49,7 +49,7 @@ type VariableCostRow = {
 export type NormalizedIngredient = { name: string; cost: number };
 export type ProductOption = { label: string; value: string; ingredients: NormalizedIngredient[] };
 export type VariableCostItem = { name: string; unitCost: number; qty: number; total: number };
-export type ChartPoint = { x: string; foot: number; interest: number; conversion: number };
+export type ChartPoint = { x: string; foot: number; interest: number; conversion: number; revenue?: number };
 export type AssumptionMetricsOverride = {
   footTraffic?: number | null;
   interestRate?: number | null;
@@ -62,6 +62,7 @@ type ParsedAssumptions = {
   topLevelIngredients: NormalizedIngredient[];
   fallbackProductRows: NormalizedIngredient[];
   variableCostRows: VariableCostItem[];
+  dailyFootTraffic?: number[] | null;
 };
 
 type AssumptionPayload = Record<string, unknown> | null;
@@ -141,6 +142,13 @@ export const parseAssumptionsPayload = (assumptions: unknown): ParsedAssumptions
     getArray<VariableCostRow>(parsed?.["daily_variable_costs"]) ??
     getArray<VariableCostRow>(assumptionsDebug?.["variableCosts"]);
 
+  const dailyFootTrafficRaw =
+    getArray<number>(parsed?.["daily_foot_traffic"]) ??
+    getArray<number>(assumptionsDebug?.["daily_foot_traffic"]) ??
+    getArray<number>(assumptionsDebug?.["dailyFootTraffic"]);
+
+  const dailyFootTraffic = dailyFootTrafficRaw ? dailyFootTrafficRaw.map(coerceNumber) : null;
+
   const variableCostRows: VariableCostItem[] = variableCandidates
     ? variableCandidates.map((item, idx) => {
       const unitCost = coerceNumber(item.unit_cost ?? item.cost_per_unit ?? item.price);
@@ -166,6 +174,7 @@ export const parseAssumptionsPayload = (assumptions: unknown): ParsedAssumptions
     topLevelIngredients,
     fallbackProductRows,
     variableCostRows: [...variableCostRows, ...hardcodedVariableCosts],
+    dailyFootTraffic,
   };
 };
 
@@ -219,6 +228,7 @@ export const buildChartData = (
           coerceMetricValue(d.foot_traffic ?? d.footTraffic ?? d.foot ?? d.footTrafficPerDay ?? 0),
         interest: overrideInterest ?? coerceMetricValue(d.interest_rate ?? d.interest ?? d.interestRate ?? 0),
         conversion: overrideConversion ?? coerceMetricValue(d.conversion_rate ?? d.conversion ?? d.conversionRate ?? 0),
+        revenue: d.revenue ?? 0,
       };
     });
   }
@@ -229,6 +239,7 @@ export const buildChartData = (
       foot: resolveFootForIndex(i) ?? 0,
       interest: overrideInterest ?? 0,
       conversion: overrideConversion ?? 0,
+      revenue: 0,
     }));
   }
 
@@ -237,6 +248,7 @@ export const buildChartData = (
     foot: Math.round(1900 + i * 90 + Math.sin(i / 2) * 120),
     interest: Math.round(26 + i * 3.5 + Math.cos(i / 2) * 5),
     conversion: Math.round(12 + i * 1.3 + (i % 2) * 2),
+    revenue: 0,
   }));
 };
 
@@ -283,8 +295,8 @@ export const deriveForecastStats = (points: ChartPoint[], overrides?: Assumption
     1,
     latest.foot * (latest.interest / 100) * (latest.conversion / 100)
   );
-  const totalNineDayBuyers = estimatedBuyersPerDay * 9;
-
+  // Calculate true sum of buyers (Foot Traffic) from Day 1 to 9 based on assumption data
+  const totalNineDayBuyers = points.reduce((sum, point) => sum + point.foot, 0);
   const statCards = [
     {
       title: "Foot Traffic Per Day",

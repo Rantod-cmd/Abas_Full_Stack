@@ -9,6 +9,7 @@ import { usePlannerState } from "../usePlannerState";
 import {
   AssumptionMetricsOverride,
   buildChartData,
+  ChartPoint,
   currency,
   deriveForecastStats,
   integer,
@@ -55,6 +56,7 @@ function AssumptionsContent() {
   const [cogsOverride, setCogsOverride] = useState<{ name: string; cost: number }[]>([]);
   const [assumptionMetrics, setAssumptionMetrics] = useState<AssumptionMetricsOverride | null>(null);
   const [selectedSku, setSelectedSku] = useState<string | undefined>(undefined);
+  const [selectedDay, setSelectedDay] = useState<ChartPoint | null>(null);
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -100,8 +102,8 @@ function AssumptionsContent() {
           return;
         }
 
-        const ingredientList = toArray(data?.ingredient ?? data?.data?.ingredient).map((item) => String(item));
-        const costList = toArray(data?.unit_cost ?? data?.data?.unit_cost).map((item) => Number(item));
+        const ingredientList = toArray(data?.name ?? data?.data?.name ?? data?.ingredient ?? data?.data?.ingredient).map((item) => String(item));
+        const costList = toArray(data?.price ?? data?.data?.price ?? data?.unit_cost ?? data?.data?.unit_cost).map((item) => Number(item));
 
         const rows = ingredientList.map((name, idx) => ({
           name: name,
@@ -222,17 +224,8 @@ function AssumptionsContent() {
       return cogsOverride;
     }
 
-    if (productOptions.length > 0) {
-      const active = productOptions.find((opt) => opt.value === activeSku) ?? productOptions[0];
-      return active?.ingredients ?? [];
-    }
-
-    if (topLevelIngredients.length > 0) {
-      return topLevelIngredients;
-    }
-
-    return fallbackProductRows;
-  }, [productOptions, activeSku, topLevelIngredients, fallbackProductRows, cogsOverride]);
+    return [];
+  }, [cogsOverride]);
 
   const cogsTotal = useMemo(
     () => cogsRows.reduce((sum, row) => sum + (Number.isFinite(row.cost) ? row.cost : 0), 0),
@@ -249,6 +242,57 @@ function AssumptionsContent() {
     () => deriveForecastStats(chartData, assumptionMetrics ?? undefined),
     [chartData, assumptionMetrics]
   );
+
+  const totalFootTraffic = useMemo(() => {
+    return chartData.reduce((acc, curr) => acc + curr.foot, 0);
+  }, [chartData]);
+
+  const displayStatCards = useMemo(() => {
+    const cards = [...statCards];
+    if (cards.length > 0) {
+      if (selectedDay) {
+        // Selected day: (Foot Traffic / (Conversion / 100)) / (Interest / 100)
+        const val = (selectedDay.foot / ((selectedDay.conversion / 100) * (selectedDay.interest / 100)));
+        cards[0] = {
+          ...cards[0],
+          value: integer(val),
+        };
+      } else {
+        // Default: 9-day total
+        cards[0] = {
+          ...cards[0],
+          value: integer(chartData.reduce((acc, curr) => acc + curr.foot, 0)),
+        };
+      }
+    }
+    return cards;
+  }, [statCards, selectedDay, totalFootTraffic]);
+
+  const displayEstBuyers = useMemo(() => {
+    if (selectedDay) {
+      // Selected day: Display Raw Foot Traffic (Day 1-9)
+      return selectedDay.foot;
+    }
+    // Default: Average/Total as calculated by helper
+    return estimatedBuyersPerDay;
+  }, [selectedDay, estimatedBuyersPerDay]);
+
+  const progressPercent = useMemo(() => {
+    if (selectedDay) {
+      // Interactive: Progress based on Day Index (Day 1 = 1/9, Day 9 = 9/9)
+      const dayMatch = selectedDay.x.match(/Day (\d+)/i);
+      if (dayMatch && dayMatch[1]) {
+        const dayNum = parseInt(dayMatch[1], 10);
+        return (dayNum / 9) * 100;
+      }
+      return 100; // Fallback
+    }
+
+    if (!totalNineDayBuyers) return 0;
+    // Default: (Sum Traffic / Total Buyers) * 100
+    return (totalFootTraffic / totalNineDayBuyers) * 100;
+  }, [selectedDay, totalFootTraffic, totalNineDayBuyers]);
+
   const assumptionStrings = useMemo(() => {
     const formatNumber = (value?: number | null, suffix?: string) => {
       if (value === null || value === undefined || Number.isNaN(value)) return "-";
@@ -342,7 +386,7 @@ function AssumptionsContent() {
                       </thead>
                       <tbody>
                         {cogsRows.map((row, idx) => (
-                          <tr key={`${row.name}-${idx}`} className="border-t border-dashed border-[#f0f2ff] text-sm">
+                          <tr key={`${row.name}-${idx}`} className="border-t border-dashed border-[#f0f2ff] text-lg">
                             <td className="py-3 font-medium text-slate-800">{row.name}</td>
                             <td className="py-3 text-right text-slate-800">{currency(row.cost)}</td>
                           </tr>
@@ -352,9 +396,6 @@ function AssumptionsContent() {
                   ) : (
                     <div className="rounded-2xl bg-slate-50 p-4 text-xs text-slate-500">
                       {t("assump.noCogs")}
-                      {typeof assumptions === "string" && (
-                        <pre className="mt-4 max-h-48 overflow-auto whitespace-pre-wrap text-[11px] text-slate-600">{assumptions}</pre>
-                      )}
                     </div>
                   )}
                 </div>
@@ -367,8 +408,8 @@ function AssumptionsContent() {
                     <span className="text-base">+</span> {t("assump.addIngredient")}
                   </button> */}
                   <div className="ml-auto w-fit text-right">
-                    <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{t("assump.totalCogs")}</p>
-                    <p className="text-2xl font-semibold text-[#1e1e54]">{currency(cogsTotal)}</p>
+                    {/*<p className="text-xs uppercase tracking-[0.3em] text-slate-400">{t("assump.totalCogs")}</p>*/}
+                    {/*<p className="text-2xl font-semibold text-[#1e1e54]">{currency(cogsTotal)}</p>*/}
                   </div>
                 </div>
               </section>
@@ -399,8 +440,8 @@ function AssumptionsContent() {
                       <tbody>
                         {variableCostRows.map((row, idx) => (
                           <tr key={`${row.name}-${idx}`} className="border-t border-dashed border-[#f0f2ff] text-sm">
-                            <td className="py-3 font-medium text-slate-800">{row.name}</td>
-                            <td className="py-3 text-right text-slate-800">{currency(row.unitCost)}</td>
+                            <td className="py-3 font-medium text-lg text-slate-800">{row.name}</td>
+                            <td className="py-3 text-right text-lg text-slate-800">{currency(row.unitCost)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -429,18 +470,12 @@ function AssumptionsContent() {
                   <span className="inline-flex items-center gap-2 text-[#4c4bd6]">
                     <span className="h-2 w-2 rounded-full bg-[#4c4bd6]" /> {t("assump.legendFootTraffic")}
                   </span>
-                  <span className="inline-flex items-center gap-2 text-[#0ea5e9]">
-                    <span className="h-2 w-2 rounded-full bg-[#0ea5e9]" /> {t("assump.legendInterest")}
-                  </span>
-                  <span className="inline-flex items-center gap-2 text-[#10b981]">
-                    <span className="h-2 w-2 rounded-full bg-[#10b981]" /> {t("assump.legendConversion")}
-                  </span>
                 </div>
               </div>
 
               <div className="mt-6 flex flex-col gap-6 lg:flex-row">
                 <div className="space-y-4 lg:w-[32%]">
-                  {statCards.map((card) => (
+                  {displayStatCards.map((card) => (
                     <article key={card.title} className="rounded-2xl border border-[#e6e9ff] bg-[#fbfbff] p-4 shadow-inner">
                       <div className="flex justify-between">
                         <div>
@@ -449,7 +484,7 @@ function AssumptionsContent() {
                         </div>
                         <svg width={20} height={20} viewBox="0 0 24 24" className="text-slate-300">
                           <path
-                            d="M12 5v14m7-7H5"
+                            /*d="M12 5v14m7-7H5"*/
                             stroke="currentColor"
                             strokeWidth="1.5"
                             strokeLinecap="round"
@@ -463,15 +498,18 @@ function AssumptionsContent() {
                 </div>
 
                 <div className="rounded-2xl border border-[#e6e9ff] p-4 lg:w-[68%]">
-                  <LineChart data={chartData} height={320} />
+                  <LineChart data={chartData} height={320} onPointClick={setSelectedDay} />
 
                   <div className="mt-6">
                     <div className="h-2 w-full rounded-full bg-[#ebeefe]">
-                      <div className="h-2 w-5/6 rounded-full bg-gradient-to-r from-[#4c4bd6] to-[#a78bfa]" />
+                      <div
+                        className="h-2 rounded-full bg-gradient-to-r from-[#4c4bd6] to-[#a78bfa]"
+                        style={{ width: `${Math.min(progressPercent, 100)}%` }}
+                      />
                     </div>
                     <div className="mt-2 flex justify-between text-[11px] uppercase tracking-[0.2em] text-slate-400">
                       <span>Day 1</span>
-                      <span>Day 21</span>
+                      <span>Day 9</span>
                     </div>
                   </div>
                 </div>
@@ -480,19 +518,21 @@ function AssumptionsContent() {
               <div className="mt-6 grid gap-4 md:grid-cols-2">
                 <div className="rounded-2xl border border-[#e6e9ff] bg-white p-4">
                   <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{t("assump.estBuyers")}</p>
-                  <p className="mt-2 text-3xl font-semibold text-[#4c4bd6]">≈ {integer(estimatedBuyersPerDay)}</p>
+                  <p className="mt-2 text-3xl font-semibold text-[#4c4bd6]">≈ {integer(displayEstBuyers)}</p>
                   <p className="text-sm text-slate-500">{t("assump.estBuyersDesc")}</p>
                 </div>
                 <div className="rounded-2xl border border-[#e6e9ff] bg-white p-4">
                   <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{t("assump.totalBuyers")}</p>
-                  <p className="mt-2 text-3xl font-semibold text-[#4c4bd6]">≈ {integer(totalNineDayBuyers)}</p>
+                  <p className="mt-2 text-3xl font-semibold text-[#4c4bd6]">≈ {integer(
+                    assumptionMetrics?.dailyFootTraffic?.reduce((sum: number, val) => sum + (val ?? 0), 0) ?? 0
+                  )}</p>
                   <p className="text-sm text-slate-500">{t("assump.totalBuyersDesc")}</p>
                 </div>
               </div>
             </section>
           </div>
-        </main>
-      </div>
-    </div>
+        </main >
+      </div >
+    </div >
   );
 }
