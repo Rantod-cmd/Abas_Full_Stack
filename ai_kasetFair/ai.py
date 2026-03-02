@@ -7,8 +7,11 @@ from openai import OpenAI
 # Load environment variables (expects OPENAI_API_KEY in .env)
 load_dotenv()
 
-# Initialize OpenAI client once to reuse between requests
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Initialize OpenAI-compatible client pointing to OpenRouter
+openai_client = OpenAI(
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    base_url="https://openrouter.ai/api/v1",
+)
 
 
 def llm_agent(user_prompt: str):
@@ -17,7 +20,7 @@ def llm_agent(user_prompt: str):
     Two calls keep Markdown and JSON responsibilities separate for reliability.
     """
     if openai_client.api_key is None:
-        raise RuntimeError("Missing OPENAI_API_KEY. Set it in your .env file.")
+        raise RuntimeError("Missing OPENROUTER_API_KEY. Set it in your .env file.")
 
     advice_resp = openai_client.chat.completions.create(
         model="gpt-4o-mini",
